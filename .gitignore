@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+out/
+build/
+coverage/
+
+# Logs and cache
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.cache/
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+
+# Electron build artifacts
+release/
+*.asar
+
+# Jest snapshots
+*.snap
+
+# Misc
+*.tmp
+*.swpnode_modules
