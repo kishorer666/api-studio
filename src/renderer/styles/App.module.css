@@ -1,0 +1,108 @@
+.container {
+  max-width: 700px;
+  margin: 40px auto;
+  font-family: 'San Francisco', Arial, Helvetica, sans-serif;
+  background: #f7f8fa;
+  border-radius: 18px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+  padding: 32px;
+  min-height: 600px;
+  border: 1px solid #e0e0e0;
+}
+
+.heading {
+  font-weight: 700;
+  font-size: 32px;
+  margin-bottom: 24px;
+  color: #222;
+  letter-spacing: -1px;
+}
+
+.form {
+  margin-bottom: 24px;
+}
+
+.row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.select, .input, .button {
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  padding: 8px 12px;
+  font-size: 16px;
+  background: #fff;
+}
+
+.button {
+  background: #007aff;
+  color: #fff;
+  font-weight: 600;
+  font-size: 16px;
+  padding: 8px 20px;
+  border: none;
+  box-shadow: 0 2px 8px rgba(0,122,255,0.08);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.bodySection {
+  margin-bottom: 18px;
+}
+
+.bodyLabel {
+  font-size: 16px;
+  color: #222;
+}
+
+.bodyRow {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.textarea {
+  width: 100%;
+  min-height: 100px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  padding: 10px 12px;
+  font-size: 15px;
+  background: #fff;
+  resize: vertical;
+  font-family: Menlo, Monaco, Consolas, monospace;
+}
+
+.panel {
+  background: #fff;
+  border-radius: 8px;
+  padding: 14px;
+  min-height: 60px;
+  white-space: pre-wrap;
+  color: #333;
+  font-size: 14px;
+  font-family: Menlo, Monaco, Consolas, monospace;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  word-break: break-word;
+  overflow-x: auto;
+  margin-bottom: 24px;
+}
+
+.responsePanel {
+  min-height: 120px;
+  color: #222;
+  font-size: 15px;
+}
+
+.label {
+  color: #888;
+  font-size: 14px;
+}
