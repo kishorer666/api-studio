@@ -13,17 +13,17 @@ interface PanelProps {
 }
 
 const baseStyle: React.CSSProperties = {
-  background: 'var(--panel-bg)',
-  border: '1px solid var(--panel-border)',
-  borderRadius: 12,
-  padding: 16,
+  background: 'var(--panel-bg, #f9fbfd)',
+  border: '1.5px solid var(--panel-border, #dbe6f3)',
+  borderRadius: 18,
+  padding: 32,
   display: 'flex',
   flexDirection: 'column',
-  gap: 12,
-  boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+  gap: 18,
+  boxShadow: '0 4px 24px rgba(80,120,180,0.10)',
   maxWidth: '100%',
   boxSizing: 'border-box',
-  transition: 'background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease'
+  transition: 'background 0.2s, border-color 0.2s, color 0.2s',
 };
 
 const headerStyle: React.CSSProperties = {

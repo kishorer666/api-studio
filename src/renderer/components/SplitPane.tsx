@@ -74,23 +74,21 @@ const SplitPane: React.FC<SplitPaneProps> = ({
 
   const dividerStyle: React.CSSProperties = direction === 'vertical'
     ? {
-        width: 6,
+        width: 12,               // comfortable hit area
         cursor: 'col-resize',
-        background: 'linear-gradient(to bottom, #d0d4d8, #c2c6ca)',
-        borderLeft: '1px solid #b9c0c7',
-        borderRight: '1px solid #b9c0c7',
-        margin: '0 4px',
-        borderRadius: 3,
+        background: 'transparent',
+        // thin center line using gradient; respects theme border color
+        backgroundImage: 'linear-gradient(to bottom, transparent calc(50% - 1px), var(--divider-color) calc(50% - 1px), var(--divider-color) calc(50% + 1px), transparent calc(50% + 1px))',
+        margin: '0 2px',
         flexShrink: 0
       }
     : {
-        height: 6,
+        height: 12,              // comfortable hit area
         cursor: 'row-resize',
-        background: 'linear-gradient(to right, #d0d4d8, #c2c6ca)',
-        borderTop: '1px solid #b9c0c7',
-        borderBottom: '1px solid #b9c0c7',
-        margin: '4px 0',
-        borderRadius: 3,
+        background: 'transparent',
+        // thin center line using gradient; respects theme border color
+        backgroundImage: 'linear-gradient(to right, transparent calc(50% - 1px), var(--divider-color) calc(50% - 1px), var(--divider-color) calc(50% + 1px), transparent calc(50% + 1px))',
+        margin: '2px 0',
         flexShrink: 0
       };
 

@@ -17,7 +17,7 @@ const styles: { [k: string]: React.CSSProperties | string } = {
     width: '100%',
     height: '100vh',
     margin: 0,
-    fontFamily: 'Arial, Helvetica, sans-serif',
+    fontFamily: "Inter, 'Segoe UI', -apple-system, BlinkMacSystemFont, 'SF Pro Text', Roboto, 'Helvetica Neue', Arial, sans-serif",
     background: 'var(--bg)',
     boxSizing: 'border-box',
     color: 'var(--text-color)',
@@ -36,38 +36,34 @@ const styles: { [k: string]: React.CSSProperties | string } = {
   form: { marginBottom: 24 },
   row: { display: 'flex', gap: 12, marginBottom: 18 },
   select: {
-    borderRadius: 8,
+    borderRadius: 6,
     border: '1px solid var(--input-border)',
-    padding: '8px 12px',
-    fontSize: 16,
+    padding: '5px 8px',
+    fontWeight: 500,
+    minWidth: 0,
     background: 'var(--input-bg)',
     color: 'var(--text-color)',
-    transition: 'background-color 0.35s, color 0.35s, border-color 0.35s'
+    transition: 'background-color 0.35s, color 0.35s, border-color 0.35s',
+    fontFamily: 'inherit',
+    fontSize: 13
   },
   input: {
-    borderRadius: 8,
+    borderRadius: 6,
     border: '1px solid var(--input-border)',
-    padding: '8px 12px',
-    fontSize: 16,
+    padding: '5px 8px',
+    fontSize: 13,
     background: 'var(--input-bg)',
     color: 'var(--text-color)',
     flex: 1,
-    transition: 'background-color 0.35s, color 0.35s, border-color 0.35s'
-  },
-  button: {
-    borderRadius: 8,
-    border: '1px solid var(--button-border)',
-    background: 'var(--button-bg)',
-    color: 'var(--button-text)',
-    fontSize: 16,
-    padding: '8px 16px',
-    cursor: 'pointer',
-    transition: 'background-color 0.25s, color 0.25s, border-color 0.25s'
+    transition: 'background-color 0.35s, color 0.35s, border-color 0.35s',
+    fontWeight: 500,
+    minWidth: 0,
+    fontFamily: 'inherit'
   },
   bodySection: { marginTop: 12, marginBottom: 24 },
   bodyLabel: { fontWeight: 600, display: 'block', marginBottom: 8 },
   bodyRow: { display: 'flex', gap: 12, alignItems: 'center', marginBottom: 8 },
-  label: { fontSize: 14, color: 'var(--subtle-text)', transition: 'color 0.35s' },
+  label: { fontSize: 15, color: 'var(--subtle-text)', transition: 'color 0.35s', fontFamily: 'inherit' },
   textarea: {
     width: '100%',
     minHeight: 160,
@@ -85,7 +81,7 @@ const styles: { [k: string]: React.CSSProperties | string } = {
     border: '1px solid var(--panel-border)',
     borderRadius: 12,
     padding: 16,
-    fontFamily: 'monospace',
+    fontFamily: 'inherit',
     fontSize: 13,
     maxHeight: 240,
     overflow: 'auto',
@@ -98,9 +94,46 @@ const styles: { [k: string]: React.CSSProperties | string } = {
     background: 'var(--panel-bg)',
     color: 'var(--text-color)',
     border: '1px solid var(--panel-border)',
-    transition: 'background-color 0.35s, color 0.35s, border-color 0.35s'
+    transition: 'background-color 0.35s, color 0.35s, border-color 0.35s',
+    fontFamily: 'inherit',
+    fontSize: 13
   }
 };
+
+// Global placeholder style (applies to all inputs and textareas)
+const globalPlaceholderCss = `
+  input::placeholder, textarea::placeholder {
+    font-style: italic;
+    color: var(--subtle-text);
+    font-weight: 400;
+  }
+  button[data-collection-pill]:hover {
+    background-color: var(--panel-bg);
+    border-color: var(--accent);
+  }
+`;
+
+// Dynamic readability boost CSS injected conditionally (mid dim levels in dark mode)
+function readabilityBoostCss(enabled: boolean) {
+  if (!enabled) return '';
+  return `
+    [data-readability-boost="true"] label,
+    [data-readability-boost="true"] span,
+    [data-readability-boost="true"] li,
+    [data-readability-boost="true"] pre,
+    [data-readability-boost="true"] input,
+    [data-readability-boost="true"] select,
+    [data-readability-boost="true"] textarea {
+      text-shadow: 0 0.5px 0 rgba(0,0,0,0.35);
+    }
+    [data-readability-boost="true"] input::placeholder,
+    [data-readability-boost="true"] textarea::placeholder {
+      color: var(--text-color);
+      font-style: italic;
+      font-weight: 400;
+    }
+  `;
+}
 
 const bodyTypes = [
   { label: 'JSON', value: 'application/json' },
@@ -153,19 +186,30 @@ function computeTheme(isDark: boolean, dimLevel: number) {
     inputBorder: '#3a4048'
   };
   // New rule: light mode ignores dim (ratio=0), dark mode uses dimLevel directly.
-  const ratio = isDark ? Math.min(1, Math.max(0, dimLevel)) : 0;
+  const clamped = Math.min(1, Math.max(0, dimLevel));
+  const ratio = isDark ? clamped : 0;
+  // Further improve readability around ~40% by biasing text/surfaces lighter
+  let textRatio = isDark ? Math.pow(clamped, 0.25) : 0; // keep text lighter even more at mid levels
+  let surfaceRatio = isDark ? Math.pow(clamped, 0.55) : 0; // keep surfaces brighter longer
+  // Contrast floor at low dim levels (e.g., ~20%) to ensure easy reading
+  if (isDark && clamped <= 0.25) {
+    textRatio = 0;         // use fully light text
+    surfaceRatio = Math.pow(clamped, 0.4); // keep surfaces brighter
+  }
   return {
-    '--bg': blend(light.bg, dark.bg, ratio),
-    '--panel-bg': blend(light.panelBg, dark.panelBg, ratio),
-    '--panel-border': blend(light.panelBorder, dark.panelBorder, ratio),
-    '--text-color': blend(light.text, dark.text, ratio),
-    '--subtle-text': blend(light.subtle, dark.subtle, ratio),
+    '--bg': blend(light.bg, dark.bg, surfaceRatio),
+    '--panel-bg': blend(light.panelBg, dark.panelBg, surfaceRatio),
+    '--panel-border': blend(light.panelBorder, dark.panelBorder, Math.max(surfaceRatio, 0.75 * ratio)),
+    '--text-color': blend(light.text, dark.text, textRatio),
+    '--subtle-text': blend(light.subtle, dark.subtle, Math.max(textRatio * 0.85, 0.4 * surfaceRatio)),
     '--accent': dark.accent,
     '--button-bg': blend(light.buttonBg, dark.buttonBg, ratio),
     '--button-border': blend(light.buttonBorder, dark.buttonBorder, ratio),
     '--button-text': dark.buttonText,
-    '--input-bg': blend(light.inputBg, dark.inputBg, ratio),
-    '--input-border': blend(light.inputBorder, dark.inputBorder, ratio)
+    '--input-bg': blend(light.inputBg, dark.inputBg, surfaceRatio),
+    '--input-border': blend(light.inputBorder, dark.inputBorder, ratio),
+    // Divider color: at low dim levels boost contrast with accent for visibility
+    '--divider-color': (isDark && clamped <= 0.4) ? dark.accent : blend(light.panelBorder, dark.panelBorder, Math.max(surfaceRatio, 0.75 * ratio))
   } as React.CSSProperties;
 }
 
@@ -723,7 +767,13 @@ const App: React.FC = () => {
   );
 
   return (
-    <div ref={containerRef} style={{ ...styles.container as React.CSSProperties, ...themeVars }}>
+    <div
+      ref={containerRef}
+      style={{ ...styles.container as React.CSSProperties, ...themeVars }}
+      data-readability-boost={isDark && dimLevel >= 0.35 && dimLevel <= 0.6 ? 'true' : 'false'}
+    >
+      <style>{globalPlaceholderCss}</style>
+      <style>{readabilityBoostCss(isDark && dimLevel >= 0.35 && dimLevel <= 0.6)}</style>
       {/* Top bar */}
       <div style={{ display: 'flex', alignItems: 'center', padding: '6px 14px', borderBottom: '1px solid var(--panel-border)', gap: 12, ...themeVars, minHeight: 40 }}>
         <h1 style={styles.heading as React.CSSProperties}>API Studio {autoSaveEnabled ? (autoSavePending ? <span style={{ fontSize: 12, fontWeight: 400, marginLeft: 12, color: 'var(--subtle-text)' }}>Saving…</span> : (lastAutoSave && <span style={{ fontSize: 12, fontWeight: 400, marginLeft: 12, color: 'var(--subtle-text)' }}>Auto-saved {lastAutoSave}</span>)) : <span style={{ fontSize: 12, fontWeight: 400, marginLeft: 12, color: 'var(--subtle-text)' }}>Auto-save off</span>}</h1>
@@ -779,21 +829,83 @@ const App: React.FC = () => {
             Dark Mode
           </label>
           {isDark && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <label htmlFor="dim-level-slider" style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-                Dim Level <span style={{ fontWeight: 600 }}>({dimLevel.toFixed(2)})</span>
+                Interface Dimmer
+                <span style={{ fontWeight: 600 }}>{Math.round(dimLevel * 100)}%</span>
               </label>
+              {/* Keep range input for accessibility and tests, but visually hide */}
               <input
                 id="dim-level-slider"
-                aria-label="Dim Level"
+                aria-label="Interface Dimmer"
                 type="range"
                 min={0}
                 max={1}
                 step={0.01}
                 value={dimLevel}
                 onChange={e => setDimLevel(parseFloat(e.target.value))}
-                style={{ width: '100%' }}
+                style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}
               />
+              {/* Volume-style continuous dimmer with increment/decrement */}
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <button
+                  type="button"
+                  aria-label="Decrease dimmer"
+                  title="Decrease dimmer"
+                  onClick={() => setDimLevel(d => Math.max(0, Math.round((d - 0.2) * 5) / 5))}
+                  style={{
+                    width: 24,
+                    height: 20,
+                    borderRadius: 6,
+                    border: '1px solid var(--panel-border)',
+                    background: 'var(--panel-bg)',
+                    color: 'var(--text-color)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  −
+                </button>
+                <div style={{ display: 'inline-flex', gap: 4 }} aria-label="Interface Dimmer Control" role="group">
+                  {Array.from({ length: 5 }).map((_, i) => {
+                    const threshold = (i + 1) / 5; // 0.2, 0.4, 0.6, 0.8, 1.0
+                    const active = dimLevel >= threshold - 0.0001;
+                    return (
+                      <div
+                        key={threshold}
+                        onClick={() => setDimLevel(threshold)}
+                        title={`Set dimmer to ${Math.round(threshold * 100)}%`}
+                        aria-label={`Set dimmer to ${Math.round(threshold * 100)} percent`}
+                        style={{
+                          width: 22,
+                          height: 10,
+                          borderRadius: 3,
+                          border: '1px solid var(--panel-border)',
+                          background: active ? 'var(--accent)' : 'var(--panel-bg)',
+                          opacity: active ? 0.9 : 1,
+                          cursor: 'pointer'
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+                <button
+                  type="button"
+                  aria-label="Increase dimmer"
+                  title="Increase dimmer"
+                  onClick={() => setDimLevel(d => Math.min(1, Math.round((d + 0.2) * 5) / 5))}
+                  style={{
+                    width: 24,
+                    height: 20,
+                    borderRadius: 6,
+                    border: '1px solid var(--panel-border)',
+                    background: 'var(--panel-bg)',
+                    color: 'var(--text-color)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  +
+                </button>
+              </div>
             </div>
           )}
           <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -855,19 +967,15 @@ const App: React.FC = () => {
                       </select>
                     </div>
                     {sortedCollections.map((c, idx) => (
-                      <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
-                        <button type="button" onClick={() => { setActiveCollection(activeWorkspace.id, c.id); refreshWorkspaces(); }} style={{ background:'transparent', border:'1px solid var(--panel-border)', padding:'2px 6px', borderRadius:6, cursor:'pointer', color: c.id===activeWorkspace.activeCollectionId? 'var(--accent)': 'var(--text-color)' }}>{c.name} ({c.requests.length}{c.requests.some(r=>r.favorite)?' ★':''})</button>
-                        <div style={{ display:'flex', gap:2 }}>
-                          <button type="button" disabled={idx===0} onClick={() => handleReorderCollection(idx,'up')} style={{ background:'transparent', border:'none', cursor: idx===0?'default':'pointer', color:'var(--subtle-text)' }}>↑</button>
-                          <button type="button" disabled={idx===activeWorkspace.collections.length-1} onClick={() => handleReorderCollection(idx,'down')} style={{ background:'transparent', border:'none', cursor: idx===activeWorkspace.collections.length-1?'default':'pointer', color:'var(--subtle-text)' }}>↓</button>
-                            <button
-                              type="button"
-                              onClick={() => setConfirmDelete({ id: c.id, name: c.name })}
-                              style={{ background:'transparent', border:'none', cursor:'pointer', color:'var(--subtle-text)' }}
-                              title="Delete collection"
-                            >🗑️</button>
+                        <div key={c.id} style={{ display:'flex', alignItems:'center', gap:6, fontSize:12 }}>
+                          <button type="button" onClick={() => { setActiveCollection(activeWorkspace.id, c.id); refreshWorkspaces(); }} style={{ background:'transparent', border:'1px solid var(--panel-border)', padding:'2px 6px', borderRadius:6, cursor:'pointer', color: c.id===activeWorkspace.activeCollectionId? 'var(--accent)': 'var(--text-color)', fontFamily:'inherit', fontSize:13 }}>{c.name} ({c.requests.length}{c.requests.some(r=>r.favorite)?' ★':''})</button>
+                          <button
+                            type="button"
+                            onClick={() => setConfirmDelete({ id: c.id, name: c.name })}
+                            style={{ background:'transparent', border:'none', cursor:'pointer', color:'var(--subtle-text)' }}
+                            title="Delete collection"
+                          >🗑️</button>
                         </div>
-                      </div>
                     ))}
                   </div>
                 ) : (
@@ -945,21 +1053,19 @@ const App: React.FC = () => {
                           <option value="favoritesFirst">Favorites First</option>
                         </select>
                       </div>
-                      {sortedCollections.map((c, idx) => (
-                        <div key={c.id} style={{ display:'flex', alignItems:'center', gap:6, fontSize:12 }}>
-                          <button type="button" onClick={() => { setActiveCollection(activeWorkspace.id, c.id); refreshWorkspaces(); }} style={{ background:'transparent', border:'1px solid var(--panel-border)', padding:'2px 6px', borderRadius:6, cursor:'pointer', color: c.id===activeWorkspace.activeCollectionId? 'var(--accent)': 'var(--text-color)' }}>{c.name} ({c.requests.length}{c.requests.some(r=>r.favorite)?' ★':''})</button>
-                          <div style={{ display:'flex', gap:2 }}>
-                            <button type="button" disabled={idx===0} onClick={() => handleReorderCollection(idx,'up')} style={{ background:'transparent', border:'none', cursor: idx===0?'default':'pointer', color:'var(--subtle-text)' }}>↑</button>
-                            <button type="button" disabled={idx===(activeWorkspace.collections?.length||0)-1} onClick={() => handleReorderCollection(idx,'down')} style={{ background:'transparent', border:'none', cursor: (activeWorkspace.collections?.length||0)-1===idx?'default':'pointer', color:'var(--subtle-text)' }}>↓</button>
-                            <button
-                              type="button"
-                              onClick={() => setConfirmDelete({ id: c.id, name: c.name })}
-                              style={{ background:'transparent', border:'none', cursor:'pointer', color:'var(--subtle-text)' }}
-                              title="Delete collection"
-                            >🗑️</button>
-                          </div>
-                        </div>
-                      ))}
+                      <div style={{ display:'flex', alignItems:'center', gap:8, marginTop:4 }}>
+                        <span style={{ fontSize: 12, color:'var(--subtle-text)' }}>Active collections:</span>
+                        <ul style={{ listStyle:'none', padding:0, margin:0, display:'flex', gap:6, flexWrap:'wrap' }}>
+                          {sortedCollections.map((c, idx) => (
+                            <li key={c.id} style={{ display:'flex', alignItems:'center', gap:6 }}>
+                              <button type="button" onClick={() => { setActiveCollection(activeWorkspace.id, c.id); refreshWorkspaces(); }} style={{ background: c.id===activeWorkspace.activeCollectionId ? 'var(--panel-bg)' : 'transparent', border:'1px solid var(--panel-border)', padding:'2px 8px', borderRadius:8, cursor:'pointer', color: c.id===activeWorkspace.activeCollectionId? 'var(--accent)': 'var(--text-color)', fontFamily:'inherit', fontSize:13, transition:'background-color 0.2s, border-color 0.2s' }} title={c.name} data-collection-pill>
+                                {c.name} ({c.requests.length}{c.requests.some(r=>r.favorite)?' ★':''})
+                              </button>
+                              <button type="button" onClick={() => setConfirmDelete({ id: c.id, name: c.name })} style={{ background:'transparent', border:'none', cursor:'pointer', color:'var(--subtle-text)' }} title="Delete collection">🗑️</button>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
                     </div>
                   </div>
                   <div>

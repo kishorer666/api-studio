@@ -188,3 +188,9 @@ Note: Project history timestamps use the current system time (EST) with AM/PM fo
 	- Auto-creates default 'Main' collection when last collection removed; shows toast feedback for deletion and fallback creation.
 - Next planned step: add regression test ensuring inputs remain enabled immediately post-deletion.
 
+## 2025-11-27 1:45 PM EST
+- Appearance improvements: Renamed "Dim Level" to "Interface Dimmer" with percentage readout and quick presets; converted to volume-style cumulative control with +/- step buttons and segments (20/40/60/80/100%).
+- Theming curves: Adjusted dark-mode blending to keep text and surfaces lighter at mid dim (40–60%) for better readability; added low-dim contrast floor (≤25%) to keep text fully light.
+- Placeholder visibility: At mid dim, placeholder color now uses `var(--text-color)` with italic, non-bold styling for clarity.
+- Divider styling: Restyled SplitPane dividers to a thin 2px center line with larger invisible hit area; introduced `--divider-color` and boosted visibility at low dim (≤40%) using accent.
+- Tests: Re-ran full suite; all 14 test suites pass (28 tests).

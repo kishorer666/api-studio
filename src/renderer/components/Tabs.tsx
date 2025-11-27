@@ -33,6 +33,7 @@ const Tabs: React.FC<TabsProps> = ({ tabs, activeId, onChange }) => {
                 borderRadius: 6,
                 fontSize: 13,
                 fontWeight: active ? 600 : 500,
+                fontFamily: 'inherit',
                 color: 'var(--text-color)',
                 transition: 'background 0.25s, color 0.25s'
               }}
