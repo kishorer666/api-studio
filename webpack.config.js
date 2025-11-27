@@ -1,13 +1,14 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
-const MiniCssExtractPlugin = require('mini-css-extract-plugin');
+const webpack = require('webpack');
 
 module.exports = {
-  mode: 'production',
+  mode: process.env.NODE_ENV === 'development' ? 'development' : 'production',
   entry: './src/renderer/index.tsx',
   output: {
     path: path.resolve(__dirname, 'dist'),
-    filename: 'renderer.js',
+    filename: '[name].js',
+    chunkFilename: '[name].chunk.js'
   },
   resolve: {
     extensions: ['.ts', '.tsx', '.js'],
@@ -38,11 +39,35 @@ module.exports = {
       },
     ],
   },
+  optimization: {
+    splitChunks: {
+      chunks: 'all',
+      cacheGroups: {
+        reactVendor: {
+          test: /[\\/]node_modules[\\/](react|react-dom)[\\/]/,
+          name: 'react-vendor',
+          priority: 20,
+          reuseExistingChunk: true
+        },
+        iconsVendor: {
+          test: /[\\/]node_modules[\\/]react-icons[\\/]/,
+          name: 'icons-vendor',
+          priority: 10,
+          reuseExistingChunk: true
+        }
+      }
+    }
+  },
+  performance: {
+    hints: process.env.TARGET === 'web' ? 'warning' : false
+  },
   plugins: [
     new HtmlWebpackPlugin({
-      template: './public/index.html',
+      template: './public/index.html'
     }),
-    // Removed MiniCssExtractPlugin for direct style injection
+    new webpack.DefinePlugin({
+      'process.env.TARGET': JSON.stringify(process.env.TARGET || 'desktop')
+    })
   ],
   devServer: {
     static: './dist',

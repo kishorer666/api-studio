@@ -7,11 +7,13 @@
     "start": "electron .",
     "build": "tsc && webpack",
     "react-start": "webpack serve --config webpack.config.js --mode development",
-    "test": "jest"
+    "test": "jest",
+    "add-history": "node scripts/add-history-entry.js"
   },
   "dependencies": {
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "react-icons": "^5.5.0"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",

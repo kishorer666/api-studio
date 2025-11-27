@@ -7,18 +7,33 @@ export type SavedRequest = {
   headers: { key: string; value: string }[];
   body: string;
   bodyType: string;
+  favorite?: boolean; // optional favorite flag
 };
 
 const STORAGE_KEY = 'apiStudioRequests';
+// Lazy import to avoid circular dependency when bundled; platformAdapter is safe singleton.
+import { platformAdapter } from '../platform/PlatformAdapter';
+function store() { return platformAdapter.storage(); }
+
+function sanitizeKV(arr: { key: string; value: string }[]) {
+  return arr.filter(kv => kv.key.trim() !== '' || kv.value.trim() !== '');
+}
 
 export function saveRequest(request: SavedRequest) {
+  const sanitized: SavedRequest = { ...request, params: sanitizeKV(request.params), headers: sanitizeKV(request.headers) };
   const existing = loadRequests();
-  const updated = [...existing.filter(r => r.id !== request.id), request];
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+  const updated = [...existing.filter(r => r.id !== sanitized.id), sanitized];
+  store().setItem(STORAGE_KEY, JSON.stringify(updated));
+}
+
+export function toggleFavorite(id: string, favorite: boolean) {
+  const existing = loadRequests();
+  const updated = existing.map(r => r.id === id ? { ...r, favorite } : r);
+  store().setItem(STORAGE_KEY, JSON.stringify(updated));
 }
 
 export function loadRequests(): SavedRequest[] {
-  const raw = localStorage.getItem(STORAGE_KEY);
+  const raw = store().getItem(STORAGE_KEY);
   if (!raw) return [];
   try {
     return JSON.parse(raw);
@@ -30,5 +45,5 @@ export function loadRequests(): SavedRequest[] {
 export function deleteRequest(id: string) {
   const existing = loadRequests();
   const updated = existing.filter(r => r.id !== id);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+  store().setItem(STORAGE_KEY, JSON.stringify(updated));
 }

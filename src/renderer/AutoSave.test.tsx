@@ -2,7 +2,8 @@ import React from 'react';
 import { render, fireEvent, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import App from './App';
-import { saveRequest, loadRequests } from './utils/storage';
+import { loadRequests } from './utils/storage';
+import { ensureDefaultWorkspace, saveRequestToCollection, setActiveCollection } from './utils/workspaceStorage';
 
 describe('Auto-save feature', () => {
   beforeEach(() => {
@@ -11,8 +12,10 @@ describe('Auto-save feature', () => {
 
   it('auto-saves loaded request after inactivity', () => {
     jest.useFakeTimers();
-    // Seed a saved request
-    saveRequest({
+    // Seed a saved request into the active collection
+    const ws = ensureDefaultWorkspace();
+    const colId = ws.activeCollectionId as string;
+    saveRequestToCollection(ws.id, colId, {
       id: 'r1',
       name: 'Seed',
       method: 'GET',
@@ -22,6 +25,7 @@ describe('Auto-save feature', () => {
       body: '',
       bodyType: 'application/json'
     });
+    setActiveCollection(ws.id, colId);
     const { getByText, getByPlaceholderText, getAllByText } = render(<App />);
     // Load the saved request
     const loadBtn = getByText('Load');
