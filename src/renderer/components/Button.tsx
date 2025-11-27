@@ -41,8 +41,8 @@ const baseStyle: React.CSSProperties = {
   justifyContent: 'center',
   gap: 6,
   userSelect: 'none',
-  border: '1px solid transparent',
-  transition: 'background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease, opacity 0.25s ease'
+  border: '1.5px solid transparent',
+  transition: 'background 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s, opacity 0.2s',
 };
 
 function variantStyle(variant: Variant, disabled: boolean): React.CSSProperties {
@@ -74,10 +74,10 @@ function variantStyle(variant: Variant, disabled: boolean): React.CSSProperties 
 function sizeStyle(size: Size): React.CSSProperties {
   switch (size) {
     case 'sm':
-      return { fontSize: 13, padding: '6px 12px' };
+      return { fontSize: 12, padding: '5px 10px' };
     case 'md':
     default:
-      return { fontSize: 15, padding: '8px 18px' };
+      return { fontSize: 13, padding: '6px 12px' };
   }
 }
 

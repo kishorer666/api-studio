@@ -7,6 +7,7 @@ const baseInput: React.CSSProperties = {
   border: '1px solid var(--input-border)',
   padding: '6px 10px',
   fontSize: 14,
+  fontFamily: 'inherit',
   background: 'var(--input-bg)',
   color: 'var(--text-color)',
   transition: 'background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease'
@@ -14,17 +15,18 @@ const baseInput: React.CSSProperties = {
 
 const kvStyles: { [k: string]: React.CSSProperties } = {
   container: { marginBottom: 12 },
-  label: { fontWeight: 'bold', display: 'block', marginBottom: 6, color: 'var(--text-color)', transition: 'color 0.3s ease' },
+  label: { fontWeight: 'bold', display: 'block', marginBottom: 6, color: 'var(--text-color)', transition: 'color 0.3s ease', fontFamily: 'inherit', fontSize: 15 },
   row: { display: 'flex', gap: 8, marginBottom: 4 },
   input: baseInput,
   valueInput: { width: 180 },
   button: {
     borderRadius: 8,
     background: 'var(--button-bg)',
-    color: 'var(--text-color)',
-    fontSize: 14,
-    padding: '6px 14px',
-    border: '1px solid var(--panel-border)',
+    color: 'var(--button-text)',
+    fontSize: 13,
+    fontFamily: 'inherit',
+    padding: '6px 12px',
+    border: '1px solid var(--button-border)',
     cursor: 'pointer',
     transition: 'background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease'
   }

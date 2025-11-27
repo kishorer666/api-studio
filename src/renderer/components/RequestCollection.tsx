@@ -118,7 +118,7 @@ const RequestCollection: React.FC<Props> = ({ onLoad, current, loadedMeta, loade
           value={newName}
           onChange={e => setNewName(e.target.value)}
           placeholder="Request name"
-          style={{ borderRadius: 8, border: '1px solid var(--input-border)', padding: '6px 10px', fontSize: 15, background: 'var(--input-bg)', color: 'var(--text-color)', transition: 'background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease' }}
+          style={{ borderRadius: 8, border: '1px solid var(--input-border)', padding: '6px 10px', fontSize: 13, fontFamily:'inherit', background: 'var(--input-bg)', color: 'var(--text-color)', transition: 'background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease' }}
         />
         <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
           <input type="checkbox" checked={newFav} onChange={e => setNewFav(e.target.checked)} /> Favorite
@@ -138,29 +138,6 @@ const RequestCollection: React.FC<Props> = ({ onLoad, current, loadedMeta, loade
           return (
             <li key={req.id} style={{ marginBottom: 6, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <span style={{ fontWeight: 500, color: 'var(--text-color)', transition: 'color 0.3s ease' }}>{req.name}</span>
-              <button
-                type="button"
-                onClick={() => {
-                  if (workspaceContext?.collectionId && workspaceContext.onPersist) {
-                    const updated: SavedRequest = { ...req, favorite: !req.favorite };
-                    workspaceContext.onPersist(updated);
-                    setRequests(prev => prev.map(r => r.id === req.id ? updated : r));
-                  } else {
-                    toggleFavorite(req.id, !req.favorite);
-                    setRequests(loadRequests());
-                  }
-                }}
-                title={req.favorite ? 'Unfavorite' : 'Mark favorite'}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
-                  color: req.favorite ? 'var(--accent)' : 'var(--subtle-text)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center'
-                }}
-              >
-                <FiStar style={{ fontSize: 16 }} />
-              </button>
               <Button
                 type="button"
                 onClick={() => handleLoad(req)}
@@ -184,6 +161,30 @@ const RequestCollection: React.FC<Props> = ({ onLoad, current, loadedMeta, loade
                   title={isDirty ? 'Update this saved request with current changes' : 'No changes to update'}
                 >{updating ? 'Updating…' : 'Update'}</Button>
               )}
+              <button
+                type="button"
+                onClick={() => {
+                  if (workspaceContext?.collectionId && workspaceContext.onPersist) {
+                    const updated: SavedRequest = { ...req, favorite: !req.favorite };
+                    workspaceContext.onPersist(updated);
+                    setRequests(prev => prev.map(r => r.id === req.id ? updated : r));
+                  } else {
+                    toggleFavorite(req.id, !req.favorite);
+                    setRequests(loadRequests());
+                  }
+                }}
+                title={req.favorite ? 'Unfavorite' : 'Mark favorite'}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: req.favorite ? 'var(--accent)' : 'var(--subtle-text)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  marginLeft: 4
+                }}
+              >
+                <FiStar style={{ fontSize: 16 }} />
+              </button>
             </li>
           );
         })}
