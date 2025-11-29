@@ -209,7 +209,11 @@ function computeTheme(isDark: boolean, dimLevel: number) {
     '--input-bg': blend(light.inputBg, dark.inputBg, surfaceRatio),
     '--input-border': blend(light.inputBorder, dark.inputBorder, ratio),
     // Divider color: at low dim levels boost contrast with accent for visibility
-    '--divider-color': (isDark && clamped <= 0.4) ? dark.accent : blend(light.panelBorder, dark.panelBorder, Math.max(surfaceRatio, 0.75 * ratio))
+    '--divider-color': (isDark && clamped <= 0.4) ? dark.accent : blend(light.panelBorder, dark.panelBorder, Math.max(surfaceRatio, 0.75 * ratio)),
+    // Scrollbar colors derived from surface/text to adapt to dim level
+    '--scrollbar-track': blend(light.panelBg, dark.panelBg, Math.max(surfaceRatio * 0.9, 0)),
+    '--scrollbar-thumb': blend(light.panelBorder, dark.panelBorder, Math.max(surfaceRatio, 0.8 * ratio)),
+    '--scrollbar-thumb-hover': blend(light.subtle, dark.subtle, Math.max(textRatio, surfaceRatio))
   } as React.CSSProperties;
 }
 
@@ -231,6 +235,8 @@ const App: React.FC = () => {
   // Tab state for request sub-sections
   const [activeRequestTab, setActiveRequestTab] = useState<'params' | 'headers' | 'body' | 'auth'>('params');
   const [prettyResponse, setPrettyResponse] = useState(true);
+  // Output tabs state for narrow layout
+  const [outputActiveTab, setOutputActiveTab] = useState<'response' | 'logs'>('response');
   // Workspace/Collection state
   const [workspaces, setWorkspaces] = useState<Workspace[]>(loadWorkspaces());
   const [activeWorkspace, setActiveWorkspaceState] = useState<Workspace>(() => ensureDefaultWorkspace());
@@ -853,6 +859,31 @@ const App: React.FC = () => {
       data-readability-boost={isDark && dimLevel >= 0.35 && dimLevel <= 0.6 ? 'true' : 'false'}
     >
       <style>{globalPlaceholderCss}</style>
+      {/* Global scrollbar styling that adapts to theme variables */}
+      <style>{`
+        /* WebKit-based (Chromium/Electron) */
+        *::-webkit-scrollbar {
+          width: 8px;
+          height: 8px;
+        }
+        *::-webkit-scrollbar-track {
+          background: transparent; /* let content show through for a lighter feel */
+        }
+        *::-webkit-scrollbar-thumb {
+          background: var(--scrollbar-thumb);
+          border-radius: 9999px; /* fully pill-shaped */
+          border: 2px solid rgba(0,0,0,0); /* space around thumb */
+          box-shadow: inset 0 0 0 2px var(--scrollbar-track);
+        }
+        *::-webkit-scrollbar-thumb:hover {
+          background: var(--scrollbar-thumb-hover);
+        }
+        /* Firefox */
+        * {
+          scrollbar-width: thin;
+          scrollbar-color: var(--scrollbar-thumb) transparent;
+        }
+      `}</style>
       <style>{readabilityBoostCss(isDark && dimLevel >= 0.35 && dimLevel <= 0.6)}</style>
       {/* Top bar */}
       <div style={{ display: 'flex', alignItems: 'center', padding: '6px 14px', borderBottom: '1px solid var(--panel-border)', gap: 12, ...themeVars, minHeight: 40 }}>
@@ -1016,7 +1047,7 @@ const App: React.FC = () => {
       {/* Main content area */}
       <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
         {isNarrow ? (
-          <div style={{ display: 'flex', flexDirection: 'column', padding: 12, gap: 12, width: '100%', boxSizing: 'border-box', minHeight: 0 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', padding: 12, gap: 12, width: '100%', boxSizing: 'border-box', minHeight: 0, overflowY: 'auto' }}>
             <Panel title="Collections">
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {/* Workspace selector removed per single-workspace UX */}
@@ -1104,10 +1135,11 @@ const App: React.FC = () => {
                   { id: 'response', label: 'Response', content: renderResponseContent() },
                   { id: 'logs', label: 'Activity', content: renderLogsContent() }
                 ]}
-                activeId={'response'}
+                activeId={outputActiveTab}
                 onChange={(id) => {
-                  // force re-render by updating state if needed (could extend with local state)
-                  setPrettyResponse(p => p); // no-op placeholder
+                  if (id === 'response' || id === 'logs') {
+                    setOutputActiveTab(id);
+                  }
                 }}
               />
             </Panel>
@@ -1115,7 +1147,7 @@ const App: React.FC = () => {
         ) : (
           <SplitPane direction="vertical" initialPrimarySize={360} minPrimarySize={260}>
             {/* Left sidebar */}
-            <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 16, height: '100%', boxSizing: 'border-box' }}>
+            <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 16, height: '100%', boxSizing: 'border-box', overflowY: 'auto', minHeight: 0 }}>
               <Panel title="Collections">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -1189,7 +1221,7 @@ const App: React.FC = () => {
             </div>
             {/* Right side: request top, response+logs bottom */}
             <SplitPane direction="horizontal" initialPrimarySize={380} minPrimarySize={280}>
-              <div style={{ padding: 16, paddingTop: 20, display: 'flex', flexDirection: 'column', gap: 16, height: '100%', boxSizing: 'border-box' }}>
+              <div style={{ padding: 16, paddingTop: 20, display: 'flex', flexDirection: 'column', gap: 16, height: '100%', boxSizing: 'border-box', overflowY: 'auto', minHeight: 0 }}>
                 <Panel
                   title="Request"
                   style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}
@@ -1199,10 +1231,10 @@ const App: React.FC = () => {
                 </Panel>
               </div>
               <SplitPane direction="vertical" initialPrimarySize={Math.round((window.innerWidth - 360) / 2)} minPrimarySize={260}>
-                <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 16, height: '100%', boxSizing: 'border-box' }}>
+                <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 16, height: '100%', boxSizing: 'border-box', overflowY: 'auto', minHeight: 0 }}>
                   <Panel title="Response" actions={renderResponseActions()}>{renderResponseContent()}</Panel>
                 </div>
-                <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 16, height: '100%', boxSizing: 'border-box' }}>
+                <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 16, height: '100%', boxSizing: 'border-box', overflowY: 'auto', minHeight: 0 }}>
                   <Panel title="Activity">{renderLogsContent()}</Panel>
                 </div>
               </SplitPane>
