@@ -195,7 +195,7 @@ Note: Project history timestamps use the current system time (EST) with AM/PM fo
 - Divider styling: Restyled SplitPane dividers to a thin 2px center line with larger invisible hit area; introduced `--divider-color` and boosted visibility at low dim (≤40%) using accent.
 - Tests: Re-ran full suite; all 14 test suites pass (28 tests).
 
-## 2025-11-29 4:25 PM EST
+## 2025-11-29 12:25 PM EST
 - Auth tab added to Request section:
 	- Moved Auth UI from Query Params into its own dedicated tab alongside Params, Headers, and Body.
 	- Added keyboard shortcut Alt+4 to switch to Auth tab; persisted active tab supports `auth` state.
@@ -203,3 +203,9 @@ Note: Project history timestamps use the current system time (EST) with AM/PM fo
 - Tests:
 	- Updated `AuthFeature.test.tsx` to click the Auth tab before interacting with auth controls.
 	- Full test run passes (15 suites, 32 tests).
+
+## 2025-11-29 1:28 PM EST
+- Rename dialog: Save disabled for empty, unchanged, and duplicate names; inline feedback messages added ("Please enter a valid name", "Name unchanged; nothing to save.", "Name exists: '<name>'").
+- Auth, collections, and dialog tests remain green.
+- Test status: 17 suites, 36 tests passed.
+- Build: successful (`npm run build`).
