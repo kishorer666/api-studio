@@ -153,6 +153,17 @@ export function renameWorkspace(workspaceId: string, newName: string) {
   saveWorkspaces(all);
 }
 
+export function renameCollection(workspaceId: string, collectionId: string, newName: string): boolean {
+  const all = loadWorkspaces();
+  const ws = all.find(w => w.id === workspaceId); if (!ws) return false;
+  const dup = (ws.collections || []).some(c => c.id !== collectionId && (c.name || '').trim().toLowerCase() === newName.trim().toLowerCase());
+  if (dup) return false;
+  const col = (ws.collections || []).find(c => c.id === collectionId); if (!col) return false;
+  col.name = newName.trim();
+  saveWorkspaces(all);
+  return true;
+}
+
 export function deleteWorkspace(workspaceId: string) {
   const all = loadWorkspaces();
   const remaining = all.filter(w => w.id !== workspaceId);

@@ -7,8 +7,8 @@ import KeyValueInputs from './components/KeyValueInputs';
 import RequestCollection from './components/RequestCollection';
 import Tabs from './components/Tabs';
 import { buildQueryString, buildHeaders, KeyValue } from './utils/requestHelpers';
-import { ensureDefaultWorkspace, loadWorkspaces, setActiveWorkspace as persistActiveWorkspace, addWorkspace, addCollection, saveRequestToCollection, deleteRequestFromCollection, toggleFavoriteInCollection, renameWorkspace, deleteWorkspace, reorderCollections, exportWorkspace, importWorkspace, setActiveCollection, deleteCollection, cleanupWorkspaces, collapseWorkspacesToSingle, Workspace } from './utils/workspaceStorage';
-import { FiSettings, FiSend, FiShuffle } from 'react-icons/fi';
+import { ensureDefaultWorkspace, loadWorkspaces, setActiveWorkspace as persistActiveWorkspace, addWorkspace, addCollection, saveRequestToCollection, deleteRequestFromCollection, toggleFavoriteInCollection, renameWorkspace, deleteWorkspace, reorderCollections, exportWorkspace, importWorkspace, setActiveCollection, deleteCollection, cleanupWorkspaces, collapseWorkspacesToSingle, renameCollection, Workspace } from './utils/workspaceStorage';
+import { FiSettings, FiSend, FiShuffle, FiEdit2, FiTrash2 } from 'react-icons/fi';
 import { useStorage } from './platform/PlatformContext';
 
 // Inline styles using CSS variables for theming
@@ -229,7 +229,7 @@ const App: React.FC = () => {
   const [collapseHeaders, setCollapseHeaders] = useState(false);
   const [collapseBody, setCollapseBody] = useState(false);
   // Tab state for request sub-sections
-  const [activeRequestTab, setActiveRequestTab] = useState<'params' | 'headers' | 'body'>('params');
+  const [activeRequestTab, setActiveRequestTab] = useState<'params' | 'headers' | 'body' | 'auth'>('params');
   const [prettyResponse, setPrettyResponse] = useState(true);
   // Workspace/Collection state
   const [workspaces, setWorkspaces] = useState<Workspace[]>(loadWorkspaces());
@@ -255,6 +255,15 @@ const App: React.FC = () => {
   const [showSettings, setShowSettings] = useState(false);
   // Auto-save preference (default enabled)
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
+  // Auth state
+  type AuthType = 'none' | 'basic' | 'bearer' | 'apikey';
+  const [authType, setAuthType] = useState<AuthType>('none');
+  const [authBasicUser, setAuthBasicUser] = useState('');
+  const [authBasicPass, setAuthBasicPass] = useState('');
+  const [authBearerToken, setAuthBearerToken] = useState('');
+  const [authApiKeyName, setAuthApiKeyName] = useState('');
+  const [authApiKeyValue, setAuthApiKeyValue] = useState('');
+  const [authApiKeyLoc, setAuthApiKeyLoc] = useState<'header' | 'query'>('header');
   const themeVars = useMemo(() => computeTheme(isDark, dimLevel), [isDark, dimLevel]);
   // Auto-save status
   const [lastAutoSave, setLastAutoSave] = useState<string | null>(null);
@@ -404,7 +413,7 @@ const App: React.FC = () => {
   useEffect(() => {
     try {
       const last = storage.getItem('apiStudio.request.activeTab');
-      if (last === 'params' || last === 'headers' || last === 'body') {
+      if (last === 'params' || last === 'headers' || last === 'body' || last === 'auth') {
         // If last was body but method currently not supporting, fallback
         if (last === 'body' && !['POST','PUT','PATCH'].includes(method)) {
           setActiveRequestTab('params');
@@ -453,9 +462,9 @@ const App: React.FC = () => {
         setShowSettings(s => !s);
       }
       // Alt+1/2/3: switch tabs (skip body if method can't have body)
-      if (e.altKey && ['1','2','3'].includes(e.key)) {
+      if (e.altKey && ['1','2','3','4'].includes(e.key)) {
         e.preventDefault();
-        const map: Record<string, 'params' | 'headers' | 'body'> = { '1': 'params', '2': 'headers', '3': 'body' };
+        const map: Record<string, 'params' | 'headers' | 'body' | 'auth'> = { '1': 'params', '2': 'headers', '3': 'body', '4': 'auth' };
         const target = map[e.key];
         if (target === 'body' && !['POST','PUT','PATCH'].includes(method)) return;
         setActiveRequestTab(target);
@@ -472,11 +481,33 @@ const App: React.FC = () => {
     setResponse('');
     setLogs([]);
     let fullUrl = url;
-    const queryString = buildQueryString(params);
+    // Apply API Key in query if selected and present
+    const augmentedParams: KeyValue[] = (() => {
+      if (authType === 'apikey' && authApiKeyLoc === 'query' && authApiKeyName.trim()) {
+        const existing = params.some(p => p.key.trim() === authApiKeyName.trim());
+        if (!existing) {
+          return [...params, { key: authApiKeyName.trim(), value: authApiKeyValue }];
+        }
+      }
+      return params;
+    })();
+    const queryString = buildQueryString(augmentedParams);
     if (queryString) {
       fullUrl += (url.includes('?') ? '&' : '?') + queryString;
     }
     let reqHeaders = buildHeaders(headers);
+    // Apply auth headers
+    if (authType === 'basic' && (authBasicUser || authBasicPass)) {
+      const token = btoa(`${authBasicUser}:${authBasicPass}`);
+      reqHeaders['Authorization'] = `Basic ${token}`;
+    } else if (authType === 'bearer' && authBearerToken.trim()) {
+      reqHeaders['Authorization'] = `Bearer ${authBearerToken.trim()}`;
+    } else if (authType === 'apikey' && authApiKeyLoc === 'header' && authApiKeyName.trim()) {
+      // Only add if not already present
+      if (!Object.keys(reqHeaders).some(h => h.toLowerCase() === authApiKeyName.trim().toLowerCase())) {
+        reqHeaders[authApiKeyName.trim()] = authApiKeyValue;
+      }
+    }
     let reqBody: string | undefined = undefined;
     setLogs(logs => [
       ...logs,
@@ -484,6 +515,7 @@ const App: React.FC = () => {
       `URL: ${fullUrl}`,
       `Method: ${method}`,
       `Headers: ${JSON.stringify(reqHeaders, null, 2)}`,
+      `Auth: ${authType}`,
       `BodyType: ${bodyType}`,
       `Body: ${body}`
     ]);
@@ -552,6 +584,11 @@ const App: React.FC = () => {
   const [inputEpoch, setInputEpoch] = useState(0);
   // Confirmation dialog state for collection deletion
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(null);
+  // Unified error dialog state (sync styling with delete dialog)
+  const [errorDialog, setErrorDialog] = useState<{ title: string; message: string } | null>(null);
+  // Rename collection dialog
+  const [renameDialog, setRenameDialog] = useState<{ id: string; prevName: string } | null>(null);
+  const [renameInput, setRenameInput] = useState('');
 
   // After a collection deletion (tick increments) or collections length change, forcibly re-focus inputs.
   useEffect(() => {
@@ -585,18 +622,18 @@ const App: React.FC = () => {
   const handleAddCollection = () => {
     const name = (newCollectionName && newCollectionName.trim());
     if (!name) {
-      alert('Please enter a collection name.');
+      setErrorDialog({ title: 'Create Collection', message: 'Please enter a collection name.' });
       return;
     }
     // Check for duplicates in current workspace (case-insensitive)
     const dup = (activeWorkspace.collections || []).some(c => c.name.trim().toLowerCase() === name.toLowerCase());
     if (dup) {
-      addToast(`Duplicate blocked: ${name} already exists`);
+      setErrorDialog({ title: 'Duplicate Collection', message: `Collection '${name}' already exists.` });
       return;
     }
     const col = addCollection(activeWorkspace.id, name);
     if (!col) {
-      addToast('Unable to create collection');
+      setErrorDialog({ title: 'Create Collection', message: 'Unable to create collection. Please try again.' });
       return;
     }
     setNewCollectionName('');
@@ -617,6 +654,12 @@ const App: React.FC = () => {
     setWorkspaces(loadWorkspaces());
     const ws = ensureDefaultWorkspace();
     setActiveWorkspaceState(ws);
+  };
+
+  // Rename collection via prompt when clicking edit icon
+  const handleRenameCollection = (collectionId: string, prevName: string) => {
+    setRenameDialog({ id: collectionId, prevName });
+    setRenameInput(prevName);
   };
 
   const handleExportWorkspace = () => {
@@ -703,6 +746,43 @@ const App: React.FC = () => {
                 <KeyValueInputs items={headers} setItems={setHeaders} label="" />
               </div>
             )},
+            { id: 'auth', label: 'Auth', content: (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <select aria-label="Auth" id="auth-type" value={authType} onChange={e => setAuthType(e.target.value as any)} style={styles.select as React.CSSProperties}>
+                    <option value="none">None</option>
+                    <option value="basic">Basic</option>
+                    <option value="bearer">Bearer</option>
+                    <option value="apikey">API Key</option>
+                  </select>
+                </div>
+                {authType === 'basic' && (
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <input type="text" placeholder="Username" value={authBasicUser} onChange={e => setAuthBasicUser(e.target.value)} style={styles.input as React.CSSProperties} />
+                    <input type="password" placeholder="Password" value={authBasicPass} onChange={e => setAuthBasicPass(e.target.value)} style={styles.input as React.CSSProperties} />
+                  </div>
+                )}
+                {authType === 'bearer' && (
+                  <input type="text" placeholder="Token" value={authBearerToken} onChange={e => setAuthBearerToken(e.target.value)} style={styles.input as React.CSSProperties} />
+                )}
+                {authType === 'apikey' && (
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <input type="text" placeholder="Key name (e.g., X-API-Key)" value={authApiKeyName} onChange={e => setAuthApiKeyName(e.target.value)} style={{ ...(styles.input as React.CSSProperties), flex: '1 1 160px' }} />
+                    <input type="text" placeholder="Value" value={authApiKeyValue} onChange={e => setAuthApiKeyValue(e.target.value)} style={{ ...(styles.input as React.CSSProperties), flex: '2 2 240px' }} />
+                    <select value={authApiKeyLoc} onChange={e => setAuthApiKeyLoc(e.target.value as any)} style={{ ...(styles.select as React.CSSProperties), flex: '0 0 120px' }}>
+                      <option value="header">Header</option>
+                      <option value="query">Query</option>
+                    </select>
+                  </div>
+                )}
+                <div style={{ fontSize: 12, color: 'var(--subtle-text)' }}>
+                  {authType === 'none' && 'No auth applied.'}
+                  {authType === 'basic' && 'Authorization: Basic <credentials>'}
+                  {authType === 'bearer' && 'Authorization: Bearer <token>'}
+                  {authType === 'apikey' && (authApiKeyLoc === 'header' ? `Header '${authApiKeyName || 'Key'}' will be sent.` : `Query param '${authApiKeyName || 'key'}' will be appended.`)}
+                </div>
+              </div>
+            )},
             ...(['POST', 'PUT', 'PATCH'].includes(method) ? [{ id: 'body', label: 'Body', content: (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -729,7 +809,7 @@ const App: React.FC = () => {
             )}] : [])
           ]}
           activeId={activeRequestTab}
-          onChange={(id) => setActiveRequestTab(id as 'params' | 'headers' | 'body')}
+          onChange={(id) => setActiveRequestTab(id as 'params' | 'headers' | 'body' | 'auth')}
         />
       </div>
     </form>
@@ -969,12 +1049,18 @@ const App: React.FC = () => {
                     {sortedCollections.map((c, idx) => (
                         <div key={c.id} style={{ display:'flex', alignItems:'center', gap:6, fontSize:12 }}>
                           <button type="button" onClick={() => { setActiveCollection(activeWorkspace.id, c.id); refreshWorkspaces(); }} style={{ background:'transparent', border:'1px solid var(--panel-border)', padding:'2px 6px', borderRadius:6, cursor:'pointer', color: c.id===activeWorkspace.activeCollectionId? 'var(--accent)': 'var(--text-color)', fontFamily:'inherit', fontSize:13 }}>{c.name} ({c.requests.length}{c.requests.some(r=>r.favorite)?' ★':''})</button>
+                          <button type="button" aria-label="Rename collection" title="Rename collection" onClick={() => handleRenameCollection(c.id, c.name)} style={{ background:'transparent', border:'1px solid var(--panel-border)', borderRadius:6, padding:'2px 6px', cursor:'pointer', color:'var(--subtle-text)' }}>
+                            <FiEdit2 />
+                          </button>
                           <button
                             type="button"
                             onClick={() => setConfirmDelete({ id: c.id, name: c.name })}
-                            style={{ background:'transparent', border:'none', cursor:'pointer', color:'var(--subtle-text)' }}
+                            style={{ background:'transparent', border:'1px solid var(--panel-border)', borderRadius:6, padding:'2px 6px', cursor:'pointer', color:'var(--subtle-text)' }}
                             title="Delete collection"
-                          >🗑️</button>
+                            aria-label="Delete collection"
+                          >
+                            <FiTrash2 />
+                          </button>
                         </div>
                     ))}
                   </div>
@@ -1061,7 +1147,12 @@ const App: React.FC = () => {
                               <button type="button" onClick={() => { setActiveCollection(activeWorkspace.id, c.id); refreshWorkspaces(); }} style={{ background: c.id===activeWorkspace.activeCollectionId ? 'var(--panel-bg)' : 'transparent', border:'1px solid var(--panel-border)', padding:'2px 8px', borderRadius:8, cursor:'pointer', color: c.id===activeWorkspace.activeCollectionId? 'var(--accent)': 'var(--text-color)', fontFamily:'inherit', fontSize:13, transition:'background-color 0.2s, border-color 0.2s' }} title={c.name} data-collection-pill>
                                 {c.name} ({c.requests.length}{c.requests.some(r=>r.favorite)?' ★':''})
                               </button>
-                              <button type="button" onClick={() => setConfirmDelete({ id: c.id, name: c.name })} style={{ background:'transparent', border:'none', cursor:'pointer', color:'var(--subtle-text)' }} title="Delete collection">🗑️</button>
+                              <button type="button" aria-label="Rename collection" title="Rename collection" onClick={() => handleRenameCollection(c.id, c.name)} style={{ background:'transparent', border:'1px solid var(--panel-border)', borderRadius:6, padding:'2px 6px', cursor:'pointer', color:'var(--subtle-text)' }}>
+                                <FiEdit2 />
+                              </button>
+                              <button type="button" onClick={() => setConfirmDelete({ id: c.id, name: c.name })} style={{ background:'transparent', border:'1px solid var(--panel-border)', borderRadius:6, padding:'2px 6px', cursor:'pointer', color:'var(--subtle-text)' }} title="Delete collection" aria-label="Delete collection">
+                                <FiTrash2 />
+                              </button>
                             </li>
                           ))}
                         </ul>
@@ -1146,6 +1237,78 @@ const App: React.FC = () => {
                   setInputEpoch(e => e + 1);
                 }}
               >Yes</Button>
+            </div>
+          </div>
+        </div>
+      )}
+      {errorDialog && (
+        <div role="dialog" aria-modal="true" style={{ position:'fixed', top:0, left:0, right:0, bottom:0, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.35)', zIndex:10000 }}>
+          <div style={{ background:'var(--panel-bg)', color:'var(--text-color)', border:'1px solid var(--panel-border)', borderRadius:12, padding:24, minWidth:300, boxShadow:'0 6px 24px rgba(0,0,0,0.4)', display:'flex', flexDirection:'column', gap:16 }}>
+            <div style={{ fontSize:16, fontWeight:600 }}>{errorDialog.title}</div>
+            <div style={{ fontSize:13 }}>{errorDialog.message}</div>
+            <div style={{ display:'flex', gap:12, justifyContent:'flex-end' }}>
+              <Button type="button" size="sm" variant="subtle" onClick={() => setErrorDialog(null)}>Close</Button>
+            </div>
+          </div>
+        </div>
+      )}
+      {renameDialog && (
+        <div role="dialog" aria-modal="true" style={{ position:'fixed', top:0, left:0, right:0, bottom:0, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.35)', zIndex:10000 }}>
+          <div style={{ background:'var(--panel-bg)', color:'var(--text-color)', border:'1px solid var(--panel-border)', borderRadius:12, padding:24, minWidth:340, boxShadow:'0 6px 24px rgba(0,0,0,0.4)', display:'flex', flexDirection:'column', gap:12 }}>
+            <div style={{ fontSize:16, fontWeight:600 }}>Rename Collection</div>
+            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              <input
+                type="text"
+                value={renameInput}
+                onChange={e => setRenameInput(e.target.value)}
+                placeholder="New collection name"
+                style={styles.input as React.CSSProperties}
+                autoFocus
+              />
+              {(() => {
+                const trimmed = (renameInput || '').trim();
+                const unchanged = trimmed.length > 0 && trimmed.toLowerCase() === (renameDialog.prevName || '').trim().toLowerCase();
+                const duplicate = (activeWorkspace.collections || []).some(c => c.id !== renameDialog.id && c.name.trim().toLowerCase() === trimmed.toLowerCase());
+                const empty = trimmed.length === 0;
+                const message = empty
+                  ? 'Please enter a valid name.'
+                  : unchanged
+                  ? 'Name unchanged; nothing to save.'
+                  : duplicate
+                  ? `Name exists: '${trimmed}'.`
+                  : '';
+                return message ? (
+                  <div style={{ fontSize:12, color:'var(--subtle-text)' }} role="status" aria-live="polite">{message}</div>
+                ) : null;
+              })()}
+            </div>
+            <div style={{ display:'flex', gap:12, justifyContent:'flex-end' }}>
+              <Button type="button" size="sm" variant="subtle" onClick={() => { setRenameDialog(null); setRenameInput(''); }}>Cancel</Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => {
+                  const name = (renameInput || '').trim();
+                  // Compute validation state
+                  const unchanged = name.toLowerCase() === (renameDialog.prevName || '').trim().toLowerCase();
+                  const duplicate = (activeWorkspace.collections || []).some(c => c.id !== renameDialog.id && c.name.trim().toLowerCase() === name.toLowerCase());
+                  if (!name || unchanged || duplicate) { return; }
+                  const ok = renameCollection(activeWorkspace.id, renameDialog.id, name);
+                  if (!ok) { setErrorDialog({ title: 'Rename Collection', message: `A collection named '${name}' already exists.` }); return; }
+                  setRenameDialog(null);
+                  setRenameInput('');
+                  refreshWorkspaces();
+                  addToast(`Collection renamed to: ${name}`);
+                }}
+                disabled={(() => {
+                  const trimmed = (renameInput || '').trim();
+                  if (trimmed.length === 0) return true;
+                  const unchanged = trimmed.toLowerCase() === (renameDialog.prevName || '').trim().toLowerCase();
+                  if (unchanged) return true;
+                  const duplicate = (activeWorkspace.collections || []).some(c => c.id !== renameDialog.id && c.name.trim().toLowerCase() === trimmed.toLowerCase());
+                  return duplicate;
+                })()}
+              >Save</Button>
             </div>
           </div>
         </div>
