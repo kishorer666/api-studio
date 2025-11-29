@@ -202,4 +202,17 @@ Note: Project history timestamps use the current system time (EST) with AM/PM fo
 	- `sendRequest` continues to apply Basic/Bearer headers and API Key (header/query) as configured.
 - Tests:
 	- Updated `AuthFeature.test.tsx` to click the Auth tab before interacting with auth controls.
-	- Full test run passes (15 suites, 32 tests).
+	- Full test run passes (17 suites, 36 tests).
+
+## 2025-11-29 4:40 PM EST
+- Responsive scrolling:
+	- Enabled vertical scrolling in narrow and wide layouts so Request, Response, and Activity panels remain accessible on smaller windows.
+- Output tabs fix (narrow layout):
+	- Added `outputActiveTab` state; Activity tab now switches content correctly in the single-column layout.
+- Scrollbar polish:
+	- Introduced themed pill-shaped scrollbars that adapt to dim level (track/ thumb/ hover colors) for a refined, non-rectangular look.
+- Rename dialog validation:
+	- Disabled Save for unchanged or duplicate names; added inline feedback messages.
+- Tests:
+	- All passing (17 suites, 36 tests).
+
