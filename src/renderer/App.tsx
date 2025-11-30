@@ -7,8 +7,8 @@ import KeyValueInputs from './components/KeyValueInputs';
 import RequestCollection from './components/RequestCollection';
 import Tabs from './components/Tabs';
 import { buildQueryString, buildHeaders, KeyValue } from './utils/requestHelpers';
-import { ensureDefaultWorkspace, loadWorkspaces, setActiveWorkspace as persistActiveWorkspace, addWorkspace, addCollection, saveRequestToCollection, deleteRequestFromCollection, toggleFavoriteInCollection, renameWorkspace, deleteWorkspace, reorderCollections, exportWorkspace, importWorkspace, setActiveCollection, deleteCollection, cleanupWorkspaces, collapseWorkspacesToSingle, renameCollection, Workspace } from './utils/workspaceStorage';
-import { FiSettings, FiSend, FiShuffle, FiEdit2, FiTrash2, FiEye, FiEyeOff } from 'react-icons/fi';
+import { ensureDefaultWorkspace, loadWorkspaces, setActiveWorkspace as persistActiveWorkspace, addWorkspace, addCollection, saveRequestToCollection, deleteRequestFromCollection, toggleFavoriteInCollection, renameWorkspace, deleteWorkspace, reorderCollections, exportWorkspace, importWorkspace, setActiveCollection, deleteCollection, cleanupWorkspaces, collapseWorkspacesToSingle, renameCollection, exportCollection, importCollection, Workspace } from './utils/workspaceStorage';
+import { FiSettings, FiSend, FiShuffle, FiEdit2, FiTrash2, FiEye, FiEyeOff, FiDownload, FiUpload } from 'react-icons/fi';
 import { useStorage } from './platform/PlatformContext';
 
 // Inline styles using CSS variables for theming
@@ -592,6 +592,8 @@ const App: React.FC = () => {
   const [collectionDeletionTick, setCollectionDeletionTick] = useState(0);
   // Force remount of input elements after destructive operations to bypass Electron focus freeze
   const [inputEpoch, setInputEpoch] = useState(0);
+  // File input refs for import/export dialogs
+  const importFileRef = useRef<HTMLInputElement | null>(null);
   // Confirmation dialog state for collection deletion
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(null);
   // Unified error dialog state (sync styling with delete dialog)
@@ -691,6 +693,48 @@ const App: React.FC = () => {
       setWorkspaces(loadWorkspaces());
       const ws = ensureDefaultWorkspace();
       setActiveWorkspaceState(ws);
+    }
+  };
+
+  const handleExportCollection = (collectionId: string) => {
+    const json = exportCollection(activeWorkspace.id, collectionId);
+    if (!json) { setErrorDialog({ title: 'Export Collection', message: 'Unable to export this collection.' }); return; }
+    // Create a downloadable JSON file
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const col = activeWorkspace.collections.find(c => c.id === collectionId);
+    const filename = `${(col?.name || 'collection').replace(/[^a-z0-9_-]/gi,'_')}.json`;
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    addToast(`Download started: ${filename}`);
+  };
+
+  const handleImportCollection = () => {
+    // Trigger hidden file input
+    if (importFileRef.current) importFileRef.current.click();
+  };
+  const onImportFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const ok = importCollection(activeWorkspace.id, text);
+      if (!ok) {
+        setErrorDialog({ title: 'Import Collection', message: 'Invalid collection JSON.' });
+        return;
+      }
+      refreshWorkspaces();
+      addToast(`Imported collection from '${file.name}'`);
+    } catch (err:any) {
+      setErrorDialog({ title: 'Import Collection', message: err?.message || 'Failed to read file.' });
+    } finally {
+      // reset input so same file can be re-selected
+      if (importFileRef.current) importFileRef.current.value = '' as any;
     }
   };
 
@@ -1216,6 +1260,9 @@ const App: React.FC = () => {
                       key={inputEpoch + '-col-wide'}
                     />
                     <Button type="button" size="sm" onClick={handleAddCollection} variant="subtle">Create Collection</Button>
+                    {/* Import/Export controls beside Create button */}
+                    <input ref={importFileRef} type="file" accept="application/json,.json" style={{ display:'none' }} onChange={onImportFileSelected} />
+                    <Button type="button" size="sm" variant="subtle" onClick={handleImportCollection} icon={<FiUpload />}>Import</Button>
                     {/* Collections list with delete control (wide layout) */}
                     <div style={{ display:'flex', flexDirection:'column', gap:4, width:'100%' }}>
                       <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
@@ -1240,9 +1287,13 @@ const App: React.FC = () => {
                               <button type="button" onClick={() => setConfirmDelete({ id: c.id, name: c.name })} style={{ background:'transparent', border:'1px solid var(--panel-border)', borderRadius:6, padding:'2px 6px', cursor:'pointer', color:'var(--subtle-text)' }} title="Delete collection" aria-label="Delete collection">
                                 <FiTrash2 />
                               </button>
+                              <button type="button" onClick={() => handleExportCollection(c.id)} style={{ background:'transparent', border:'1px solid var(--panel-border)', borderRadius:6, padding:'2px 6px', cursor:'pointer', color:'var(--subtle-text)' }} title="Export collection" aria-label="Export collection">
+                                <FiDownload />
+                              </button>
                             </li>
                           ))}
                         </ul>
+                        {/* Import control kept near Create Collection for consistency; removed here for cleaner UI */}
                       </div>
                     </div>
                   </div>
