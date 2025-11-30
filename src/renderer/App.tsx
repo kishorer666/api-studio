@@ -7,7 +7,7 @@ import KeyValueInputs from './components/KeyValueInputs';
 import RequestCollection from './components/RequestCollection';
 import Tabs from './components/Tabs';
 import { buildQueryString, buildHeaders, KeyValue } from './utils/requestHelpers';
-import { ensureDefaultWorkspace, loadWorkspaces, setActiveWorkspace as persistActiveWorkspace, addWorkspace, addCollection, saveRequestToCollection, deleteRequestFromCollection, toggleFavoriteInCollection, renameWorkspace, deleteWorkspace, reorderCollections, exportWorkspace, importWorkspace, setActiveCollection, deleteCollection, cleanupWorkspaces, collapseWorkspacesToSingle, renameCollection, exportCollection, importCollection, Workspace } from './utils/workspaceStorage';
+import { ensureDefaultWorkspace, loadWorkspaces, setActiveWorkspace as persistActiveWorkspace, addWorkspace, addCollection, saveRequestToCollection, deleteRequestFromCollection, toggleFavoriteInCollection, renameWorkspace, deleteWorkspace, reorderCollections, exportWorkspace, importWorkspace, setActiveCollection, deleteCollection, cleanupWorkspaces, collapseWorkspacesToSingle, renameCollection, exportCollection, importCollection, importCollectionWithName, Workspace } from './utils/workspaceStorage';
 import { FiSettings, FiSend, FiShuffle, FiEdit2, FiTrash2, FiEye, FiEyeOff, FiDownload, FiUpload } from 'react-icons/fi';
 import { useStorage } from './platform/PlatformContext';
 
@@ -594,6 +594,8 @@ const App: React.FC = () => {
   const [inputEpoch, setInputEpoch] = useState(0);
   // File input refs for import/export dialogs
   const importFileRef = useRef<HTMLInputElement | null>(null);
+  const [importDialog, setImportDialog] = useState<{ name: string; requests: SavedRequest[] } | null>(null);
+  const [importNameInput, setImportNameInput] = useState('');
   // Confirmation dialog state for collection deletion
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(null);
   // Unified error dialog state (sync styling with delete dialog)
@@ -723,13 +725,29 @@ const App: React.FC = () => {
     if (!file) return;
     try {
       const text = await file.text();
-      const ok = importCollection(activeWorkspace.id, text);
-      if (!ok) {
+      const parsed = JSON.parse(text);
+      if (!parsed || !parsed.name || !Array.isArray(parsed.requests)) {
         setErrorDialog({ title: 'Import Collection', message: 'Invalid collection JSON.' });
         return;
       }
-      refreshWorkspaces();
-      addToast(`Imported collection from '${file.name}'`);
+      const name = String(parsed.name).trim();
+      const dup = (activeWorkspace.collections || []).some(c => c.name.trim().toLowerCase() === name.toLowerCase());
+      if (dup) {
+        setImportDialog({ name, requests: parsed.requests });
+        setImportNameInput(`${name}-import`);
+      } else {
+        const ok = importCollection(activeWorkspace.id, text);
+        if (!ok) {
+          setErrorDialog({ title: 'Import Collection', message: 'Import failed.' });
+          return;
+        }
+        // Set active to the newly created or merged collection
+        const ws = loadWorkspaces().find(w => w.id === activeWorkspace.id)!;
+        const target = ws.collections.find(c => c.name.trim().toLowerCase() === name.toLowerCase());
+        if (target) setActiveCollection(activeWorkspace.id, target.id);
+        refreshWorkspaces();
+        addToast(`Imported collection from '${file.name}'`);
+      }
     } catch (err:any) {
       setErrorDialog({ title: 'Import Collection', message: err?.message || 'Failed to read file.' });
     } finally {
@@ -1446,6 +1464,58 @@ const App: React.FC = () => {
                   const duplicate = (activeWorkspace.collections || []).some(c => c.id !== renameDialog.id && c.name.trim().toLowerCase() === trimmed.toLowerCase());
                   return duplicate;
                 })()}
+              >Save</Button>
+            </div>
+          </div>
+        </div>
+      )}
+      {importDialog && (
+        <div role="dialog" aria-modal="true" style={{ position:'fixed', top:0, left:0, right:0, bottom:0, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.35)', zIndex:10000 }}>
+          <div style={{ background:'var(--panel-bg)', color:'var(--text-color)', border:'1px solid var(--panel-border)', borderRadius:12, padding:24, minWidth:340, boxShadow:'0 6px 24px rgba(0,0,0,0.4)', display:'flex', flexDirection:'column', gap:12 }}>
+            <div style={{ fontSize:16, fontWeight:600 }}>Import Collection</div>
+            <div style={{ fontSize:13, color:'var(--subtle-text)' }}>A collection named '{importDialog.name}' already exists. Please choose a different name.</div>
+            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              <input
+                type="text"
+                value={importNameInput}
+                onChange={e => setImportNameInput(e.target.value)}
+                placeholder="Collection name"
+                style={styles.input as React.CSSProperties}
+                autoFocus
+              />
+              {(() => {
+                const trimmed = (importNameInput || '').trim();
+                const empty = trimmed.length === 0;
+                const duplicate = (activeWorkspace.collections || []).some(c => c.name.trim().toLowerCase() === trimmed.toLowerCase());
+                const message = empty ? 'Please enter a valid name.' : (duplicate ? `Name exists: '${trimmed}'.` : '');
+                return message ? (<div style={{ fontSize:12, color:'var(--subtle-text)' }} role="status" aria-live="polite">{message}</div>) : null;
+              })()}
+            </div>
+            <div style={{ display:'flex', gap:12, justifyContent:'flex-end' }}>
+              <Button type="button" size="sm" variant="subtle" onClick={() => { setImportDialog(null); setImportNameInput(''); }}>Cancel</Button>
+              <Button
+                type="button"
+                size="sm"
+                disabled={(() => {
+                  const trimmed = (importNameInput || '').trim();
+                  if (trimmed.length === 0) return true;
+                  const duplicate = (activeWorkspace.collections || []).some(c => c.name.trim().toLowerCase() === trimmed.toLowerCase());
+                  return duplicate;
+                })()}
+                onClick={() => {
+                  const name = (importNameInput || '').trim();
+                  if (!name) return;
+                  const res = importCollectionWithName(activeWorkspace.id, name, importDialog.requests);
+                  if (!res.ok || !res.id) {
+                    setErrorDialog({ title: 'Import Collection', message: `Unable to import as '${name}'.` });
+                    return;
+                  }
+                  setActiveCollection(activeWorkspace.id, res.id);
+                  refreshWorkspaces();
+                  addToast(`Imported collection as '${name}'`);
+                  setImportDialog(null);
+                  setImportNameInput('');
+                }}
               >Save</Button>
             </div>
           </div>

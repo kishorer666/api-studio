@@ -205,6 +205,53 @@ export function importWorkspace(json: string) {
   } catch { return false; }
 }
 
+// Export a single collection to JSON
+export function exportCollection(workspaceId: string, collectionId: string): string | null {
+  const ws = loadWorkspaces().find(w => w.id === workspaceId);
+  if (!ws) return null;
+  const col = (ws.collections || []).find(c => c.id === collectionId);
+  if (!col) return null;
+  return JSON.stringify({ name: col.name, requests: col.requests }, null, 2);
+}
+
+// Import a collection JSON and add/merge into the workspace
+export function importCollection(workspaceId: string, json: string): boolean {
+  try {
+    const data = JSON.parse(json) as { name?: string; requests?: SavedRequest[] };
+    if (!data || !data.name || !Array.isArray(data.requests)) return false;
+    const all = loadWorkspaces();
+    const ws = all.find(w => w.id === workspaceId);
+    if (!ws) return false;
+    const key = data.name.trim().toLowerCase();
+    let target = (ws.collections || []).find(c => c.name.trim().toLowerCase() === key);
+    if (!target) {
+      target = { id: 'col-'+Date.now().toString(), name: data.name.trim(), requests: [] };
+      ws.collections.push(target);
+      ws.activeCollectionId = target.id;
+    }
+    const existingIds = new Set((target.requests || []).map(r => r.id));
+    (data.requests || []).forEach(r => { if (r && r.id && !existingIds.has(r.id)) target!.requests.push(r); });
+    target.lastUpdated = Date.now();
+    saveWorkspaces(all);
+    return true;
+  } catch { return false; }
+}
+
+// Import a collection using a provided name, creating a new collection (no merge). Returns new collection id on success.
+export function importCollectionWithName(workspaceId: string, name: string, requests: SavedRequest[]): { ok: boolean; id?: string } {
+  const all = loadWorkspaces();
+  const ws = all.find(w => w.id === workspaceId);
+  if (!ws) return { ok: false };
+  const dup = (ws.collections || []).some(c => c.name.trim().toLowerCase() === name.trim().toLowerCase());
+  if (dup) return { ok: false };
+  const id = 'col-' + Date.now().toString();
+  const col: Collection = { id, name: name.trim(), requests: Array.isArray(requests) ? requests : [] };
+  ws.collections.push(col);
+  ws.activeCollectionId = id;
+  saveWorkspaces(all);
+  return { ok: true, id };
+}
+
 // Maintenance: remove duplicate collections (case-insensitive) by name and merge requests
 export function cleanupWorkspaces() {
   const all = loadWorkspaces();
