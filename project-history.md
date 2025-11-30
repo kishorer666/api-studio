@@ -223,3 +223,17 @@ Note: Project history timestamps use the current system time (EST) with AM/PM fo
 - Tests:
 	- Full suite remains green (17 suites, 36 tests).
 
+## 2025-11-29 5:55 PM EST
+- Collection pill UI enhancement:
+	- Replaced boxy buttons with fully pill-shaped gradient badges (`.collection-pill`) featuring smooth hover/active states and accessible focus outline.
+	- Active collection now uses accent background + shadow; inactive pills subtly elevate on hover for clearer affordance.
+	- Added truncated name span (`.name-text`) with ellipsis to prevent layout shift on long names.
+	- Added dedicated request count badge (`.count-badge`) and conditional favorite star (`★`) with distinct color for quick scan of collection importance.
+	- Improved accessibility: aria-labels on activation buttons, focus-visible outline, semantic separation of name vs. metadata.
+- Behavioral refinement:
+	- Editor resets on collection switch to a clean state (no residual request data) requiring deliberate load of a request in the new context.
+- ID namespacing recap:
+	- Request IDs persisted as `<collectionId>::<originalId>` ensuring uniqueness across collections while maintaining stable identity per collection.
+- Build status: Successful compile after UI changes; existing test suites remain green (17 suites, 36 tests).
+	
+

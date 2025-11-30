@@ -107,10 +107,6 @@ const globalPlaceholderCss = `
     color: var(--subtle-text);
     font-weight: 400;
   }
-  button[data-collection-pill]:hover {
-    background-color: var(--panel-bg);
-    border-color: var(--accent);
-  }
 `;
 
 // Dynamic readability boost CSS injected conditionally (mid dim levels in dark mode)
@@ -1000,6 +996,63 @@ const App: React.FC = () => {
       data-readability-boost={isDark && dimLevel >= 0.35 && dimLevel <= 0.6 ? 'true' : 'false'}
     >
       <style>{globalPlaceholderCss}</style>
+      <style>{`
+        .collection-pill {
+          position: relative;
+          padding: 4px 10px 4px 12px;
+          border: 1px solid var(--panel-border);
+          border-radius: 9999px;
+          background: linear-gradient(180deg, var(--panel-bg) 0%, rgba(0,0,0,0.04) 100%);
+          color: var(--text-color);
+          font-size: 13px;
+          font-weight: 500;
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          cursor: pointer;
+          transition: background-color .25s, border-color .25s, color .25s, box-shadow .25s;
+          text-decoration: none;
+          user-select: none;
+        }
+        .collection-pill[data-active="true"] {
+          background: var(--accent);
+          color: var(--button-text);
+          border-color: var(--accent);
+          box-shadow: 0 2px 6px rgba(0,0,0,.25);
+        }
+        .collection-pill:not([data-active="true"]):hover {
+          border-color: var(--accent);
+          box-shadow: 0 1px 4px rgba(0,0,0,.18);
+        }
+        .collection-pill:focus-visible {
+          outline: 2px solid var(--accent);
+          outline-offset: 2px;
+        }
+        .collection-pill .count-badge {
+          background: rgba(0,0,0,0.08);
+          color: var(--text-color);
+          font-size: 11px;
+          padding: 2px 6px;
+          border-radius: 9999px;
+          line-height: 1;
+          font-weight: 600;
+        }
+        .collection-pill[data-active="true"] .count-badge {
+          background: rgba(255,255,255,0.25);
+          color: var(--button-text);
+        }
+        .collection-pill .fav-star {
+          color: #ffc400;
+          font-size: 12px;
+          line-height: 1;
+        }
+        .collection-pill .name-text {
+          white-space: nowrap;
+          max-width: 140px;
+          text-overflow: ellipsis;
+          overflow: hidden;
+        }
+      `}</style>
       {/* Global scrollbar styling that adapts to theme variables */}
       <style>{`
         /* WebKit-based (Chromium/Electron) */
@@ -1220,7 +1273,19 @@ const App: React.FC = () => {
                     </div>
                     {sortedCollections.map((c, idx) => (
                         <div key={c.id} style={{ display:'flex', alignItems:'center', gap:6, fontSize:12 }}>
-                          <button type="button" onClick={() => { setActiveCollection(activeWorkspace.id, c.id); resetRequestEditor(); refreshWorkspaces(); }} style={{ background:'transparent', border:'1px solid var(--panel-border)', padding:'2px 6px', borderRadius:6, cursor:'pointer', color: c.id===activeWorkspace.activeCollectionId? 'var(--accent)': 'var(--text-color)', fontFamily:'inherit', fontSize:13 }}>{c.name} ({c.requests.length}{c.requests.some(r=>r.favorite)?' ★':''})</button>
+                          <button
+                            type="button"
+                            className="collection-pill"
+                            data-collection-pill
+                            data-active={c.id===activeWorkspace.activeCollectionId ? 'true' : 'false'}
+                            onClick={() => { setActiveCollection(activeWorkspace.id, c.id); resetRequestEditor(); refreshWorkspaces(); }}
+                            title={c.name}
+                            aria-label={`Activate collection ${c.name}`}
+                          >
+                            <span className="name-text">{c.name}</span>
+                            {c.requests.some(r=>r.favorite) && <span className="fav-star" aria-label="Contains favorites">★</span>}
+                            <span className="count-badge" aria-label={`Request count ${c.requests.length}`}>{c.requests.length}</span>
+                          </button>
                           <button type="button" aria-label="Rename collection" title="Rename collection" onClick={() => handleRenameCollection(c.id, c.name)} style={{ background:'transparent', border:'1px solid var(--panel-border)', borderRadius:6, padding:'2px 6px', cursor:'pointer', color:'var(--subtle-text)' }}>
                             <FiEdit2 />
                           </button>
@@ -1320,8 +1385,18 @@ const App: React.FC = () => {
                         <ul style={{ listStyle:'none', padding:0, margin:0, display:'flex', gap:6, flexWrap:'wrap' }}>
                           {sortedCollections.map((c, idx) => (
                             <li key={c.id} style={{ display:'flex', alignItems:'center', gap:6 }}>
-                              <button type="button" onClick={() => { setActiveCollection(activeWorkspace.id, c.id); resetRequestEditor(); refreshWorkspaces(); }} style={{ background: c.id===activeWorkspace.activeCollectionId ? 'var(--panel-bg)' : 'transparent', border:'1px solid var(--panel-border)', padding:'2px 8px', borderRadius:8, cursor:'pointer', color: c.id===activeWorkspace.activeCollectionId? 'var(--accent)': 'var(--text-color)', fontFamily:'inherit', fontSize:13, transition:'background-color 0.2s, border-color 0.2s' }} title={c.name} data-collection-pill>
-                                {c.name} ({c.requests.length}{c.requests.some(r=>r.favorite)?' ★':''})
+                              <button
+                                type="button"
+                                className="collection-pill"
+                                data-collection-pill
+                                data-active={c.id===activeWorkspace.activeCollectionId ? 'true' : 'false'}
+                                onClick={() => { setActiveCollection(activeWorkspace.id, c.id); resetRequestEditor(); refreshWorkspaces(); }}
+                                title={c.name}
+                                aria-label={`Activate collection ${c.name}`}
+                              >
+                                <span className="name-text">{c.name}</span>
+                                {c.requests.some(r=>r.favorite) && <span className="fav-star" aria-label="Contains favorites">★</span>}
+                                <span className="count-badge" aria-label={`Request count ${c.requests.length}`}>{c.requests.length}</span>
                               </button>
                               <button type="button" aria-label="Rename collection" title="Rename collection" onClick={() => handleRenameCollection(c.id, c.name)} style={{ background:'transparent', border:'1px solid var(--panel-border)', borderRadius:6, padding:'2px 6px', cursor:'pointer', color:'var(--subtle-text)' }}>
                                 <FiEdit2 />
