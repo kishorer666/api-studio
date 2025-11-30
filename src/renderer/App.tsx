@@ -8,7 +8,7 @@ import RequestCollection from './components/RequestCollection';
 import Tabs from './components/Tabs';
 import { buildQueryString, buildHeaders, KeyValue } from './utils/requestHelpers';
 import { ensureDefaultWorkspace, loadWorkspaces, setActiveWorkspace as persistActiveWorkspace, addWorkspace, addCollection, saveRequestToCollection, deleteRequestFromCollection, toggleFavoriteInCollection, renameWorkspace, deleteWorkspace, reorderCollections, exportWorkspace, importWorkspace, setActiveCollection, deleteCollection, cleanupWorkspaces, collapseWorkspacesToSingle, renameCollection, Workspace } from './utils/workspaceStorage';
-import { FiSettings, FiSend, FiShuffle, FiEdit2, FiTrash2 } from 'react-icons/fi';
+import { FiSettings, FiSend, FiShuffle, FiEdit2, FiTrash2, FiEye, FiEyeOff } from 'react-icons/fi';
 import { useStorage } from './platform/PlatformContext';
 
 // Inline styles using CSS variables for theming
@@ -270,6 +270,10 @@ const App: React.FC = () => {
   const [authApiKeyName, setAuthApiKeyName] = useState('');
   const [authApiKeyValue, setAuthApiKeyValue] = useState('');
   const [authApiKeyLoc, setAuthApiKeyLoc] = useState<'header' | 'query'>('header');
+  // Visibility toggles for sensitive inputs
+  const [showBasicPassword, setShowBasicPassword] = useState(false);
+  const [showBearerToken, setShowBearerToken] = useState(false);
+  const [showApiKeyValue, setShowApiKeyValue] = useState(false);
   const themeVars = useMemo(() => computeTheme(isDark, dimLevel), [isDark, dimLevel]);
   // Auto-save status
   const [lastAutoSave, setLastAutoSave] = useState<string | null>(null);
@@ -763,18 +767,69 @@ const App: React.FC = () => {
                   </select>
                 </div>
                 {authType === 'basic' && (
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <input type="text" placeholder="Username" value={authBasicUser} onChange={e => setAuthBasicUser(e.target.value)} style={styles.input as React.CSSProperties} />
-                    <input type="password" placeholder="Password" value={authBasicPass} onChange={e => setAuthBasicPass(e.target.value)} style={styles.input as React.CSSProperties} />
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <input type="text" placeholder="Username" value={authBasicUser} onChange={e => setAuthBasicUser(e.target.value)} style={{ ...(styles.input as React.CSSProperties), flex: '1 1 160px' }} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: '1 1 160px' }}>
+                      <input
+                        type={showBasicPassword ? 'text' : 'password'}
+                        placeholder="Password"
+                        value={authBasicPass}
+                        onChange={e => setAuthBasicPass(e.target.value)}
+                        style={{ ...(styles.input as React.CSSProperties), flex: '1 1 auto' }}
+                      />
+                      <button
+                        type="button"
+                        aria-label={showBasicPassword ? 'Hide password' : 'Show password'}
+                        title={showBasicPassword ? 'Hide password' : 'Show password'}
+                        onClick={() => setShowBasicPassword(v => !v)}
+                        style={{ background:'transparent', border:'1px solid var(--panel-border)', borderRadius:6, padding:'4px 6px', cursor:'pointer', color:'var(--subtle-text)' }}
+                      >
+                        {showBasicPassword ? <FiEyeOff /> : <FiEye />}
+                      </button>
+                    </div>
                   </div>
                 )}
                 {authType === 'bearer' && (
-                  <input type="text" placeholder="Token" value={authBearerToken} onChange={e => setAuthBearerToken(e.target.value)} style={styles.input as React.CSSProperties} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <input
+                      type={showBearerToken ? 'text' : 'password'}
+                      placeholder="Token"
+                      value={authBearerToken}
+                      onChange={e => setAuthBearerToken(e.target.value)}
+                      style={{ ...(styles.input as React.CSSProperties), flex: '1 1 auto' }}
+                    />
+                    <button
+                      type="button"
+                      aria-label={showBearerToken ? 'Hide token' : 'Show token'}
+                      title={showBearerToken ? 'Hide token' : 'Show token'}
+                      onClick={() => setShowBearerToken(v => !v)}
+                      style={{ background:'transparent', border:'1px solid var(--panel-border)', borderRadius:6, padding:'4px 6px', cursor:'pointer', color:'var(--subtle-text)' }}
+                    >
+                      {showBearerToken ? <FiEyeOff /> : <FiEye />}
+                    </button>
+                  </div>
                 )}
                 {authType === 'apikey' && (
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                     <input type="text" placeholder="Key name (e.g., X-API-Key)" value={authApiKeyName} onChange={e => setAuthApiKeyName(e.target.value)} style={{ ...(styles.input as React.CSSProperties), flex: '1 1 160px' }} />
-                    <input type="text" placeholder="Value" value={authApiKeyValue} onChange={e => setAuthApiKeyValue(e.target.value)} style={{ ...(styles.input as React.CSSProperties), flex: '2 2 240px' }} />
+                    <div style={{ display:'flex', alignItems:'center', gap:6, flex: '2 2 240px' }}>
+                      <input
+                        type={showApiKeyValue ? 'text' : 'password'}
+                        placeholder="Value"
+                        value={authApiKeyValue}
+                        onChange={e => setAuthApiKeyValue(e.target.value)}
+                        style={{ ...(styles.input as React.CSSProperties), flex: '1 1 auto' }}
+                      />
+                      <button
+                        type="button"
+                        aria-label={showApiKeyValue ? 'Hide API key' : 'Show API key'}
+                        title={showApiKeyValue ? 'Hide API key' : 'Show API key'}
+                        onClick={() => setShowApiKeyValue(v => !v)}
+                        style={{ background:'transparent', border:'1px solid var(--panel-border)', borderRadius:6, padding:'4px 6px', cursor:'pointer', color:'var(--subtle-text)' }}
+                      >
+                        {showApiKeyValue ? <FiEyeOff /> : <FiEye />}
+                      </button>
+                    </div>
                     <select value={authApiKeyLoc} onChange={e => setAuthApiKeyLoc(e.target.value as any)} style={{ ...(styles.select as React.CSSProperties), flex: '0 0 120px' }}>
                       <option value="header">Header</option>
                       <option value="query">Query</option>
