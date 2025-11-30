@@ -229,8 +229,17 @@ export function importCollection(workspaceId: string, json: string): boolean {
       ws.collections.push(target);
       ws.activeCollectionId = target.id;
     }
+    // Namespace ids per collection to preserve identity within the collection and avoid cross-collection collisions
     const existingIds = new Set((target.requests || []).map(r => r.id));
-    (data.requests || []).forEach(r => { if (r && r.id && !existingIds.has(r.id)) target!.requests.push(r); });
+    (data.requests || []).forEach(r => {
+      if (!r) return;
+      const namespacedId = `${target!.id}::${r.id || ''}`;
+      const newReq: SavedRequest = { ...r, id: namespacedId };
+      if (!existingIds.has(newReq.id)) {
+        target!.requests.push(newReq);
+        existingIds.add(newReq.id);
+      }
+    });
     target.lastUpdated = Date.now();
     saveWorkspaces(all);
     return true;
@@ -245,7 +254,16 @@ export function importCollectionWithName(workspaceId: string, name: string, requ
   const dup = (ws.collections || []).some(c => c.name.trim().toLowerCase() === name.trim().toLowerCase());
   if (dup) return { ok: false };
   const id = 'col-' + Date.now().toString();
-  const col: Collection = { id, name: name.trim(), requests: Array.isArray(requests) ? requests : [] };
+  const col: Collection = {
+    id,
+    name: name.trim(),
+    requests: Array.isArray(requests)
+      ? requests.map(r => ({
+          ...r,
+          id: `${id}::${r.id || ''}`
+        }))
+      : []
+  };
   ws.collections.push(col);
   ws.activeCollectionId = id;
   saveWorkspaces(all);

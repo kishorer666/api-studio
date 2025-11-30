@@ -371,8 +371,8 @@ const App: React.FC = () => {
           body,
           bodyType
         };
-        // Direct storage update
-        saveRequest(req);
+        // Persist to the active collection only to avoid cross-collection bleed
+        persistRequestToCollection(req);
         // Refresh snapshot baseline
         setLoadedRequestOriginal({ ...req, params: req.params.map(kv => ({ ...kv })), headers: req.headers.map(kv => ({ ...kv })) });
         setLogs(l => [...l, `Auto-saved request '${req.name}' at ${new Date().toLocaleTimeString()}`]);
@@ -772,6 +772,30 @@ const App: React.FC = () => {
   };
 
   // Render helpers for new layout pieces
+  const resetRequestEditor = () => {
+    setMethod('GET');
+    setUrl('');
+    setParams([]);
+    setHeaders([]);
+    setBody('');
+    setBodyType(bodyTypes[0].value);
+    setResponse('');
+    setLogs([]);
+    setLoadedRequestMeta(null);
+    setLoadedRequestOriginal(null);
+    setActiveRequestTab('params');
+    setOutputActiveTab('response');
+    setShowBasicPassword(false);
+    setShowBearerToken(false);
+    setShowApiKeyValue(false);
+    setAuthType('none');
+    setAuthBasicUser('');
+    setAuthBasicPass('');
+    setAuthBearerToken('');
+    setAuthApiKeyName('');
+    setAuthApiKeyValue('');
+    setAuthApiKeyLoc('header');
+  };
   const renderRequestForm = () => (
     <form onSubmit={sendRequest} style={{ display: 'flex', flexDirection: 'column', gap: 12, minHeight: 0 }}>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -1196,7 +1220,7 @@ const App: React.FC = () => {
                     </div>
                     {sortedCollections.map((c, idx) => (
                         <div key={c.id} style={{ display:'flex', alignItems:'center', gap:6, fontSize:12 }}>
-                          <button type="button" onClick={() => { setActiveCollection(activeWorkspace.id, c.id); refreshWorkspaces(); }} style={{ background:'transparent', border:'1px solid var(--panel-border)', padding:'2px 6px', borderRadius:6, cursor:'pointer', color: c.id===activeWorkspace.activeCollectionId? 'var(--accent)': 'var(--text-color)', fontFamily:'inherit', fontSize:13 }}>{c.name} ({c.requests.length}{c.requests.some(r=>r.favorite)?' ★':''})</button>
+                          <button type="button" onClick={() => { setActiveCollection(activeWorkspace.id, c.id); resetRequestEditor(); refreshWorkspaces(); }} style={{ background:'transparent', border:'1px solid var(--panel-border)', padding:'2px 6px', borderRadius:6, cursor:'pointer', color: c.id===activeWorkspace.activeCollectionId? 'var(--accent)': 'var(--text-color)', fontFamily:'inherit', fontSize:13 }}>{c.name} ({c.requests.length}{c.requests.some(r=>r.favorite)?' ★':''})</button>
                           <button type="button" aria-label="Rename collection" title="Rename collection" onClick={() => handleRenameCollection(c.id, c.name)} style={{ background:'transparent', border:'1px solid var(--panel-border)', borderRadius:6, padding:'2px 6px', cursor:'pointer', color:'var(--subtle-text)' }}>
                             <FiEdit2 />
                           </button>
@@ -1296,7 +1320,7 @@ const App: React.FC = () => {
                         <ul style={{ listStyle:'none', padding:0, margin:0, display:'flex', gap:6, flexWrap:'wrap' }}>
                           {sortedCollections.map((c, idx) => (
                             <li key={c.id} style={{ display:'flex', alignItems:'center', gap:6 }}>
-                              <button type="button" onClick={() => { setActiveCollection(activeWorkspace.id, c.id); refreshWorkspaces(); }} style={{ background: c.id===activeWorkspace.activeCollectionId ? 'var(--panel-bg)' : 'transparent', border:'1px solid var(--panel-border)', padding:'2px 8px', borderRadius:8, cursor:'pointer', color: c.id===activeWorkspace.activeCollectionId? 'var(--accent)': 'var(--text-color)', fontFamily:'inherit', fontSize:13, transition:'background-color 0.2s, border-color 0.2s' }} title={c.name} data-collection-pill>
+                              <button type="button" onClick={() => { setActiveCollection(activeWorkspace.id, c.id); resetRequestEditor(); refreshWorkspaces(); }} style={{ background: c.id===activeWorkspace.activeCollectionId ? 'var(--panel-bg)' : 'transparent', border:'1px solid var(--panel-border)', padding:'2px 8px', borderRadius:8, cursor:'pointer', color: c.id===activeWorkspace.activeCollectionId? 'var(--accent)': 'var(--text-color)', fontFamily:'inherit', fontSize:13, transition:'background-color 0.2s, border-color 0.2s' }} title={c.name} data-collection-pill>
                                 {c.name} ({c.requests.length}{c.requests.some(r=>r.favorite)?' ★':''})
                               </button>
                               <button type="button" aria-label="Rename collection" title="Rename collection" onClick={() => handleRenameCollection(c.id, c.name)} style={{ background:'transparent', border:'1px solid var(--panel-border)', borderRadius:6, padding:'2px 6px', cursor:'pointer', color:'var(--subtle-text)' }}>
