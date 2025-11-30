@@ -3,15 +3,22 @@ const { app, BrowserWindow } = require('electron');
 const path = require('path');
 
 function createWindow() {
+  const { screen } = require('electron');
+  const { width, height } = screen.getPrimaryDisplay().workAreaSize;
   const win = new BrowserWindow({
-    width: 1200,
-    height: 800,
+    width,
+    height,
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
     },
+    show: false
   });
   win.loadFile(path.join(__dirname, 'dist', 'index.html'));
+  win.once('ready-to-show', () => {
+    win.maximize();
+    win.show();
+  });
 }
 
 app.whenReady().then(createWindow);
