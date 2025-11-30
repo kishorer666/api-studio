@@ -216,3 +216,10 @@ Note: Project history timestamps use the current system time (EST) with AM/PM fo
 - Tests:
 	- All passing (17 suites, 36 tests).
 
+## 2025-11-29 5:10 PM EST
+- Auth UX:
+	- Added show/hide toggles with eye icons for sensitive fields in the Auth tab: Basic password, Bearer token, and API key value.
+	- Accessible labels and titles; styling aligns with theme and dim level.
+- Tests:
+	- Full suite remains green (17 suites, 36 tests).
+
